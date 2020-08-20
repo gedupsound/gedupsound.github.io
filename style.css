@@ -1,9 +1,6 @@
-p.a {
-  font: 20px Arial, sans-serif;
-}
-
 body {
   background-color:#E8E8E8;
+  font-family: 20px sans-serif, Arial;
 }
 
 h1 {

@@ -5,7 +5,8 @@ body {
 }
 
 h1, h2 {
-  color: #3cb371;
+  color: #943c3c; /* light/dark red */
+  /* color: #3cb371; */
 }
 
 a {

@@ -4,14 +4,16 @@ body {
   color: #a7a6a6;
 }
 
-h1 {
-  color: #943c3c;
+h1,h2 {
+  #color: #943c3c; #light/dark red
+  color: rgb(121, 221, 145); #minty-green
 }
 
-h2 {
-  color: #943c3c;
-}
+#h2 {
+#  #color: #943c3c; #light/dark red
+#}
 
 a {
-  color: #3cb371;
+  #color: #3cb371; #lightish green
+  color: rgb(86, 177, 255); #light-blue
 }

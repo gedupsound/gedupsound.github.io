@@ -4,8 +4,9 @@ body {
   color: #a7a6a6; #light-gray
 }
 
-h1,h2 {
+h1, h2 {
   #color: #943c3c; #light/dark red
+  #color: #22863a; #slightly-darker-green
   color: rgb(121, 221, 145); #minty-green
 }
 

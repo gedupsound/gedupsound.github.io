@@ -1,7 +1,11 @@
 body {
   background-color: #000000;
   font-family: Sans-Serif;
-  color: #a7a6a6; #light-gray
+  color: #a7a6a6; /* light-gray */
+  margin-top: 10%;
+  margin-left: 10%;
+  margin-right: 10%;
+  margin-bottom: 10%;  
 }
 
 h1, h2 {

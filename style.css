@@ -6,11 +6,8 @@ body {
 
 h1, h2 {
   color: rgb(121, 221, 145); #minty-green
-  #color: #943c3c; #light/dark red
-  #color: #22863a; #slightly-darker-green
 }
 
 a {
   color: rgb(86, 177, 255); #light-blue
-  #color: #3cb371; #lightish-green
 }

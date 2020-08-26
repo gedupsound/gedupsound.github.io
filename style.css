@@ -19,6 +19,7 @@ img {
 }
 
 h1, h2 {
+  margin: 0 auto;
   color: #b12121; /* light/dark red */
   /* color: #3cb371; */
 }

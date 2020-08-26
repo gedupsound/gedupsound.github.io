@@ -1,6 +1,7 @@
 body {
   margin: auto;
   width: 60%;
+  padding: 10px;
   background-color: #000000;
   font-family: Sans-Serif;
   color: #a7a6a6; /* light-gray */

@@ -46,9 +46,9 @@ QUERY=$(ldapsearch \ <br>
  --hostname 'ad.uoregon.edu' \ <br>
  --port 636 \ <br>
  --useSSL --trustAll \ <br>
- --bindDN "CN=is-svc-listsmodify,OU=Service Accounts,OU=Unmanaged,OU=Users,OU=IS,OU=Units,DC=ad,DC=uoregon,DC=edu" \ <br>
- --bindPassword 'ABC123abc' \ <br>
- --baseDN 'OU=Managed,OU=Users,OU=IS,OU=Units,DC=ad,DC=uoregon,DC=edu' \ <br>
+ --bindDN "CN=is-svc-listsmodify,OU=Service Accounts,OU=Unmanaged,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com" \ <br>
+ --bindPassword '<PASSWORD>' \ <br>
+ --baseDN 'OU=Managed,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com' \ <br>
  --scope sub "(|(UOAD-UoPersonAffiliation=staff)(UOAD-UoPersonAffiliation=administrative faculty))" UserPrincipalName | sed '/^dn:/d' | sed '/^#/d' | sed 's/userPrincipalName: //' | sed '/^$/d') <br>
  <br>
  <br>

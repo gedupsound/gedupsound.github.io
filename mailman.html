@@ -1,0 +1,108 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	<title>
+		Gabe McGinnis - Mailman Script (Bash)
+	</title>
+
+	<body>
+		<h1> <center> Mailman Script: Automating a Manual Process </center> </h1> <p>
+		<p>
+		Our team supports a Mailman list server, and while it just chugs along all on its own, I took an interest in learning more about the application.
+    <p>
+		<p>
+    
+    #!/bin/bash
+
+##################################################################################
+# 
+# Created by: gabe@uoregon.edu
+#
+# Purpose: Automate the process of adding Information Services staffmembers to 
+#          important mailing lists for Information Services:
+#
+#	   Campus-IT-Professionals
+#          IS-Staff
+#
+# Requirements: ldapsearch enhancement is required for the syntax of the ldapsearch
+#               to function: unboundid-ldapsdk-3.0.0-se.zip and java 
+#
+#
+##################################################################################
+
+# Sourcing in the environment path to include the unboundid-ldapsdk path
+source ~/.bash_profile
+
+
+# Block list for users that should not be included in IS-related mailing lists that still reside in the IS OU
+
+NOLIST="mattsonc@uoregon.edu"
+
+
+# LDAP query of IS OU Managd users
+
+QUERY=$(ldapsearch \
+ --hostname 'ad.uoregon.edu' \
+ --port 636 \
+ --useSSL --trustAll \
+ --bindDN "CN=is-svc-listsmodify,OU=Service Accounts,OU=Unmanaged,OU=Users,OU=IS,OU=Units,DC=ad,DC=uoregon,DC=edu" \
+ --bindPassword 'ABC123abc' \
+ --baseDN 'OU=Managed,OU=Users,OU=IS,OU=Units,DC=ad,DC=uoregon,DC=edu' \
+ --scope sub "(|(UOAD-UoPersonAffiliation=staff)(UOAD-UoPersonAffiliation=administrative faculty))" UserPrincipalName | sed '/^dn:/d' | sed '/^#/d' | sed 's/userPrincipalName: //' | sed '/^$/d')
+
+
+# Reference for mailman cmds
+
+# ITPROS=$(/usr/local/mailman/bin/list_members campus-it-professionals)
+# ISSTAFF=$(/usr/local/mailman/bin/list_members IS-Staff)
+# ADDISSTAFF=/usr/local/mailman/bin/add_members
+# ADDITPROS=
+
+
+# Conditional logic, looking for a user membership in IS groups, if they are not found to be members, they will be added to each respective group
+
+
+for USER in $QUERY
+do
+    #echo $USER 
+    # IS-Staff list query
+    if [ $(/usr/local/mailman/bin/list_members IS-Staff | grep $USER) ]
+    then
+        if [ "$(echo $NOLIST | grep $USER)" ]
+        then
+            echo "$USER found in IS-Staff, $USER found in NOLIST, removing from IS-Staff."
+            #mailman command
+        fi
+    else
+        if [ "$(echo $NOLIST | grep $USER)" ]
+        then
+            A=$(echo "$USER not found in IS-Staff, $USER found in NOLIST, no action required.")
+        else
+            echo "$USER not found in IS-Staff, not in NOLIST, adding $USER to IS-Staff"
+            #mailman command
+        fi
+    fi
+
+    # Campus-IT-Professionals list query
+    if [ $(/usr/local/mailman/bin/list_members Campus-IT-Professionals | grep $USER) ]
+    then
+        if [ "$(echo $NOLIST | grep $USER)" ]
+        then
+            echo "$USER found in Campus-IT-Professionals, $USER found in NOLIST, removing from Campus-IT-Professionals."
+            #mailman command
+        fi
+    else
+        if [ "$(echo $NOLIST | grep $USER)" ]
+        then
+            B=$(echo "$USER not found in Campus-IT-Professionals, $USER found in NOLIST, no action required.")
+        else
+            echo "$USER not found in Campus-IT-Professionals, not in NOLIST, adding $USER to Campus-IT-Professionals."
+            #mailman command
+        fi
+    fi
+done
+    
+    <p>
+	</body>
+</html>

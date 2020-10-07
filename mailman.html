@@ -12,10 +12,74 @@
 		Our team supports a Mailman list server, and while it just chugs along all on its own, I took an interest in learning more about the application.
 	        <p>
 		<pre>
-		line0
-			line1
-		line2
-				line3
+#!/bin/bash
+
+# Sourcing in the environment path to include the unboundid-ldapsdk path
+source ~/.bash_profile
+
+# Block list for users that should not be included in IS-related mailing lists that still reside in the IS OU
+NOLIST="person@domain.com"
+
+# LDAP query of IS OU Managed users
+QUERY=$(ldapsearch \
+ --hostname 'ad.domain.com' \
+ --port 636 \
+ --useSSL --trustAll \
+ --bindDN "CN=is-svc-listsmodify,OU=Service Accounts,OU=Unmanaged,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com" \
+ --bindPassword '...' \
+ --baseDN 'OU=Managed,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com' \
+ --scope sub "(|(AD-UoPersonAffiliation=staff)(AD-UoPersonAffiliation=administrative faculty))" UserPrincipalName | sed '/^dn:/d';'/^#/d';'s/userPrincipalName: //';sed '/^$/d')
+
+# Conditional logic, looking for a user membership in IS groups, if they are not found to be members, they will be added to each respective group
+for USER in $QUERY
+do
+    #echo $USER
+    # IS-Staff list query
+    if [ $(/usr/local/mailman/bin/list_members IS-Staff | grep $USER) ]
+    then
+        if [ "$(echo $NOLIST | grep $USER)" ]
+        then
+            echo "$USER found in IS-Staff, $USER found in NOLIST, removing from IS-Staff."
+            /usr/local/mailman/bin/remove_members is-staff $USER
+        fi
+    else
+        if [ "$(echo $NOLIST | grep $USER)" ]
+        then
+            A=$(echo "$USER not found in IS-Staff, $USER found in NOLIST, no action required.")
+        else
+            echo "$USER not found in IS-Staff, not in NOLIST, adding $USER to IS-Staff"
+            echo $USER | /usr/local/mailman/bin/add_members -r - is-staff
+        fi
+    fi
+
+    # Domain-IT-Professionals list query
+    if [ $(/usr/local/mailman/bin/list_members Domain-IT-Professionals | grep $USER) ]
+    then
+        if [ "$(echo $NOLIST | grep $USER)" ]
+        then
+            echo "$USER found in Domain-IT-Professionals, $USER found in NOLIST, removing from Domain-IT-Professionals."
+            /usr/local/mailman/bin/remove_members is-staff $USER
+        fi
+    else
+        if [ "$(echo $NOLIST | grep $USER)" ]
+        then
+            B=$(echo "$USER not found in Domain-IT-Professionals, $USER found in NOLIST, no action required.")
+        else
+            echo "$USER not found in Domain-IT-Professionals, not in NOLIST, adding $USER to Domain-IT-Professionals."
+            echo $USER | /usr/local/mailman/bin/add_members -r - Domain-it-professionals
+        fi
+    fi
+done
+
+
+# Reference for mailman cmds
+# /usr/local/mailman/bin/list_members Domain-it-professionals)
+# /usr/local/mailman/bin/list_members IS-Staff)
+# echo $USER | /usr/local/mailman/bin/add_members -r - Domain-it-professionals
+# echo $USER | /usr/local/mailman/bin/add_members -r - is-staff
+# /usr/local/mailman/bin/remove_members Domain-it-professionals $USER
+# /usr/local/mailman/bin/remove_members it-staff $USER
+
 		</pre>
 		<p>
     		<img src="mailmanScript.PNG">

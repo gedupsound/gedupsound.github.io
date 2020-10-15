@@ -22,16 +22,25 @@
 #!/bin/bash
 
 # Sourcing in the environment path to include the unboundid-ldapsdk path
-source ~/.bash_profile
+source ~/.bash_profile  ### Utilizing unboundid binaries for ease of ldaps syntax in the ldap query command block below
+
+
+# Logging function
+log()
+{
+    DATE=$(date +%y_%m_%d)
+    echo `date +%y/%m/%d_%H:%M:%S`:: $* >> ~/logs/listmodify_is_$DATE.log 2>&1
+}
+
 
 # Block list for users that should not be included in IS-related mailing lists that still reside in the IS OU
-NOLIST="person@domain.com"
+NOLIST="person0@domain.com person1@domain.com"
 
 # LDAP query of IS OU Managed users
 QUERY=$(ldapsearch \
  --hostname 'ad.domain.com' \
  --port 636 \
- --useSSL --trustAll \
+ --useSSL --trustAll \  ### These options are possible using the unboundid binaries, which makes ldaps connections much easier
  --bindDN "CN=is-svc-listsmodify,OU=Service Accounts,OU=Unmanaged,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com" \
  --bindPassword '...' \
  --baseDN 'OU=Managed,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com' \
@@ -46,7 +55,7 @@ do
     then
         if [ "$(echo $NOLIST | grep $USER)" ]
         then
-            echo "$USER found in IS-Staff, $USER found in NOLIST, removing from IS-Staff."
+            log "$USER found in IS-Staff, $USER found in NOLIST, removing from IS-Staff."
             /usr/local/mailman/bin/remove_members is-staff $USER
         fi
     else
@@ -54,7 +63,7 @@ do
         then
             A=$(echo "$USER not found in IS-Staff, $USER found in NOLIST, no action required.")
         else
-            echo "$USER not found in IS-Staff, not in NOLIST, adding $USER to IS-Staff"
+            log "$USER not found in IS-Staff, not in NOLIST, adding $USER to IS-Staff"
             echo $USER | /usr/local/mailman/bin/add_members -r - is-staff
         fi
     fi
@@ -64,7 +73,7 @@ do
     then
         if [ "$(echo $NOLIST | grep $USER)" ]
         then
-            echo "$USER found in Domain-IT-Professionals, $USER found in NOLIST, removing from Domain-IT-Professionals."
+            log "$USER found in Domain-IT-Professionals, $USER found in NOLIST, removing from Domain-IT-Professionals."
             /usr/local/mailman/bin/remove_members is-staff $USER
         fi
     else
@@ -72,7 +81,7 @@ do
         then
             B=$(echo "$USER not found in Domain-IT-Professionals, $USER found in NOLIST, no action required.")
         else
-            echo "$USER not found in Domain-IT-Professionals, not in NOLIST, adding $USER to Domain-IT-Professionals."
+            log "$USER not found in Domain-IT-Professionals, not in NOLIST, adding $USER to Domain-IT-Professionals."
             echo $USER | /usr/local/mailman/bin/add_members -r - Domain-it-professionals
         fi
     fi

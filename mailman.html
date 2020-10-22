@@ -12,11 +12,12 @@
 		Our team supports a Mailman list server, and while it just chugs along happily all on its own, I uncovered a need for automating a task for the administrative
 		staff of our department to manage membership of a couple mailing lists that they tried their best to keep current when new employees are onboarded. The 
 		script does a good job of finding users in our department Organizational Unit in AD (a service I own) that need to be added to mailing lists in question. 
+		<p>
 		In future iterations of this script, I'd like to add logic that would help weed out users that should be removed from the mailing lists. The managed user 
 		identities within our department OUs are managed by an authoritative identity management solution "above" Active Directory, and as such, manage the 
 		creation/updating/disabling/removal of user objects, but those tasks are managed by HR policies and actions regarding employee status. What this means is, 
-		we have many managed user objects that resides in Active Directory that may no longer be affiliated/active users that live on the system. To combat re-adding 
-		users who are known to have left the organization, I included the "NOLIST" variable to prevent those known users from being re-added to mailing lists.
+		we have many managed user objects that reside in Active Directory that may no longer be affiliated/active users but still live on the system. To combat re-adding 
+		users who are known to have left the organization (but still have lingering user objects), I included the "NOLIST" variable to prevent those known users from being re-added to mailing lists.
 	        <p>
 		<img src="listmodify_is_sh.PNG">
 		<p>

@@ -1,0 +1,206 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	<title>
+		Gabe McGinnis
+	</title>
+
+	<body>
+		<h1>Zoom Reconciliation Utilizing Zoom's API (Powershell)</h1> <p>
+    <p>
+		<pre>
+    
+    #
+# Purpose: Audit users in the Zoom tenant with no group membership, determine if they have the right user license, and assign them to Faculty or Students
+#
+# Requirements: PowerShell 5.1 (and likely anything newer), running on PowerShell older than 5.1 yielded hanging and eratic performance.
+#               
+# Logs: "C:\logs\zoom\" <---- Directory must exist for logging to work.
+#
+# Created by: Gabe McGinnis (gabe@domain.com)
+#
+
+
+# Logging
+$ErrorActionPreference = "Continue"
+$logDir = "C:\logs\zoom\"
+$timeStamp = Get-Date -Format "yyMMddHHmm"
+$logFile = "ZoomUsersWithNoGroupLicenseReconcile_$($timeStamp).log"
+Start-Transcript (Join-Path $logDir $logFile) -Append
+
+# Use TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+
+# Affiliatons
+$facultyAffs = "administrative faculty","associate","courtesy","emeritus","faculty","fixed short term faculty","fixed term enduring faculty","staff","gtf","temporary employee"
+$nonPersonAffs = "departmental"
+
+# api header/creds. JWT expires 00:00 n/n/nnnn, JWT is deployed via the custom personal app 'User License/Group Reconcile', where it can be renewed.
+$headers=@{} 
+$headers.Add("authorization", "Bearer ******************************************************************************* ") 
+
+
+# gather users from zoom tenant / pagination
+$apiCurrentPageNumber = 1
+$apiListUsers = Invoke-RestMethod -Uri "https://api.zoom.us/v2/users?role_id=2&page_number=$apiCurrentPageNumber&page_size=300&status=active" -Method GET -Headers $headers
+$apiUserPagesTotal = $apiListUsers.page_count
+Write-Host "Total pages of query:" $apiUserPagesTotal
+$apiCurrentPageNumber = $apiListUsers.page_number
+$userCollection = @()
+$userCollection += $apiListUsers.users
+
+while ($apiCurrentPageNumber -lt $apiUserPagesTotal)
+    {
+        $apiCurrentPageNumber++
+        $apiListUsers = Invoke-RestMethod -Uri "https://api.zoom.us/v2/users?role_id=2&page_number=$apiCurrentpagenumber&page_size=300&status=active" -Method GET -Headers $headers
+        $userCollection += $apiListUsers.users
+    }
+
+Write-Host "Total users in uoregon tenant:" $userCollection.count  -ForegroundColor Green
+
+#$userCollection | Out-File -FilePath "c:\temp\zoom\UserCollectionDump.txt" -Append
+
+# Gather non-grouped users and audit their assigned license
+$counter = 0
+$facultyCounter = 0
+$studentsCounter = 0
+$nonPersonCounter = 0
+$foreignDomainCounter = 0
+
+Foreach ($user in $userCollection)
+    {
+        #$user.email | Out-File -FilePath "c:\temp\zoom\UserCollectionDump.txt" -Append
+        # grab users who do not have group membership
+        If ($user.group_ids -eq $null)
+            {
+                $counter++
+                # get user zoom user properties
+                $userLicense = $user.type
+                $userEmail = $user.email
+                # get user affiliation in AD and count the faculty-associated affs
+                $domainID = ($user.email).split('@')[0]
+                $emailSuffix = ($user.email).split('@')[1]
+                If ($emailSuffix -eq 'domain.com')
+                    {
+                        If ($affs)
+                            {
+                                Remove-Variable affs
+                            }
+                        $affs = Get-ADUser $domainID -Properties "uoad-uopersonaffiliation" | select -ExpandProperty "uoad-uopersonaffiliation"
+                        $facAffCounter = 0
+                        $nonPersonAffCounter = 0
+                        Foreach ($aff in $affs)
+                            {
+                                If ($facultyAffs -contains $aff)
+                                    {
+                                        $facAffCounter++
+                                    }
+                                If ($nonPersonAffs -contains $aff)
+                                    {
+                                        $nonPersonAffCounter++
+                                    }
+                            }
+                       # determine if license type needs to be changed based on current affiliation
+                       If (($facAffCounter -gt 0) -and ($nonPersonAffCounter -eq 0))
+                           {
+                               # Assign Education license if user object doesnt already have one assigned
+                               If ($userLicense -ne '2')
+                                   {
+                                       Write-Host "$domainID  -  Assigning Licensed (type=2)"
+                                       Invoke-RestMethod -Uri https://api.zoom.us/v2/users/$userEmail -Method PATCH -Headers $headers -ContentType 'application/json' -Body '{"type":2}'
+                                   }
+                               # Add user to Faculty group
+                               $body = '{"members":[{"email":' + '"' + "$userEmail" + '"' + '}]}'
+                               Write-Host "$domainID  -  Adding to Faculty group"
+                               Invoke-RestMethod -Uri "https://api.zoom.us/v2/groups/xH0XHzg4S2iLoNpICNrrUw/members" -Method POST -Headers $headers -ContentType 'application/json' -Body $body
+                               $affs
+                               $facultyCounter++                  
+                           }
+                       If (($facAffCounter -eq 0) -and ($nonPersonAffCounter -eq 0))
+                           {
+                               # Assign basic license if user object doesnt already have one assigned
+                               If ($userLicense -ne '1')
+                                   {
+                                       Write-Host "$domainID  -  Assigning Basic (type=1)"                           
+                                       Invoke-RestMethod -Uri https://api.zoom.us/v2/users/$userEmail -Method PATCH -Headers $headers -ContentType 'application/json' -Body '{"type":1}'
+                                   }
+                               # Add user to Students group
+                               $body = '{"members":[{"email":' + '"' + "$userEmail" + '"' + '}]}'
+                               Write-Host "$domainID  -  Adding to Students group"
+                               Invoke-RestMethod -Uri "https://api.zoom.us/v2/groups/B6GAETAxQEaXX9f3Ga34TQ/members" -Method POST -Headers $headers -ContentType 'application/json' -Body $body
+                               $affs
+                               $studentsCounter++
+                           }
+                       If (($nonPersonAffCounter -gt 0) -and ($facAffCounter -eq 0))
+                           {
+                               # Assign basic license if user object doesnt already have one assigned
+                               If ($userLicense -ne '1')
+                                   {
+                                       Write-Host "$domainID  -  Assigning Basic (type=1)"                           
+                                       Invoke-RestMethod -Uri https://api.zoom.us/v2/users/$userEmail -Method PATCH -Headers $headers -ContentType 'application/json' -Body '{"type":1}'
+                                   }
+                               # Add user to Alum-Retired-Role-Etc
+                               $body = '{"members":[{"email":' + '"' + "$userEmail" + '"' + '}]}'
+                               Write-Host "$domainID  -  Adding to Alum-Retired-Role-Etc group" -ForegroundColor DarkYellow
+                               Invoke-RestMethod -Uri "https://api.zoom.us/v2/groups/nOCA3TPtT1iMQR_6IZxJ2Q/members" -Method POST -Headers $headers -ContentType 'application/json' -Body $body
+                               $affs
+                               $nonPersonCounter++
+                           }
+                    }
+                If ($emailSuffix -ne 'domain.com')
+                    {
+                        # Assign basic license if user object doesnt already have one assigned
+                        If ($userLicense -ne '1')
+                            {
+                                Write-Host "$domainID  -  Assigning Basic (type=1)"                           
+                                Invoke-RestMethod -Uri https://api.zoom.us/v2/users/$userEmail -Method PATCH -Headers $headers -ContentType 'application/json' -Body '{"type":1}'
+                            }
+                        # Add user to Alum-Retired-Role-Etc
+                        $body = '{"members":[{"email":' + '"' + "$userEmail" + '"' + '}]}'
+                        Write-Host "$domainID  -  Adding to Alum-Retired-Role-Etc group" -ForegroundColor Cyan
+                        Invoke-RestMethod -Uri "https://api.zoom.us/v2/groups/nOCA3TPtT1iMQR_6IZxJ2Q/members" -Method POST -Headers $headers -ContentType 'application/json' -Body $body
+                        $foreignDomainCounter++
+                    }
+            }
+    }
+
+# Non-grouped users counter
+Write-Host "Total users without a group that were processed:" $counter -ForegroundColor Green
+Write-Host "Total faculty without a group:" $facultyCounter -ForegroundColor Green
+Write-Host "Total students without a group:" $studentsCounter -ForegroundColor Green
+Write-Host "Total non-persons without a group:" $nonPersonCounter -ForegroundColor Green
+Write-Host "Total foreign domain users without a group:" $foreignDomainCounter -ForegroundColor Green
+
+
+# Email
+
+$body1 = "Script: zoomReconcile-nonGrouped.ps1"
+$body2 = "Server: is-toolbox.ad.domain.com"
+$body3 = "File location: C:\Scripts\ids\zoom\zoomReconcile-nongGrouped.ps1"
+$body4 = "Scheduled Task name: Task Scheduler > IDS Team > Zoom Reconcile"
+$body5 = "Service Account: is-svc-zoomscript"
+$body6 = "Logs: c:\logs\zoom\"
+$body7 = "Git repo: puppet_ids"
+$body8 = "Documentation: https://confluence.domain.com/display/IDM/Zoom+Reconciliation"
+$bodyLine = ""
+$bodyDashes = "+-------------------------- Results -----------------------------------+"
+$bodyLine = ""
+$body9 = "Total users without a group that were processed: $counter" | Out-String
+$body10 = "Total faculty without a group: $facultyCounter" | Out-String
+$body11 = "Total students without a group: $studentsCounter" | Out-String
+$body12 = "Total non-persons without a group: $nonPersonCounter" | Out-String
+$body13 = "Total foreign domain users without a group: $foreignDomainCounter" | Out-String
+$bodyMerge = $body1,$body2,$body3,$body4,$body5,$body6,$body7,$body8,$bodyLine,$bodyDashes,$bodyLine,$body9,$body10,$body11,$body12,$body13 | Out-String
+
+Send-MailMessage -SmtpServer "smtp.domain.com" -From "ZoomReports@domain.com" -To "is.ids@domain.com" -Subject "**** Zoom Reconcile: Non-grouped Users ****" -Body "$bodyMerge"
+
+
+# Stops logging
+Stop-Transcript
+    
+    </pre>
+
+	</body>
+</html>

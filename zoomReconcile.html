@@ -3,12 +3,24 @@
 		<link rel="stylesheet" type="text/css" href="style.css">
 	</head>
 	<title>
-		Gabe McGinnis
+		Gabe McGinnis - Zoom Licensing Reconciliation
 	</title>
 
 	<body>
 		<h1>Zoom Licensing Reconciliation Utilizing Zoom's API (Powershell)</h1> <p>
-    <p>
+    		<p>
+		Our rapid deployment of Zoom for COVID-19 response compressed planning and configuration to a very small amount of time. One of the challenges
+		we encountered involved ensuring and auditing that all users had appropriate licensing assigned. Shibboleth IDP/SSO is our primary means for
+		authentication and assignment of licensing, based on affiliation to the organization. However, the rules/policies configured for SSO login and
+		licensing assignment works ONLY if this is the first time a user has ever logged into a Zoom environment. If a user has an existing Zoom account
+		associated to any other zoom "account", such as a personal account, this will (in short) cause the user to go through an alternate user creation
+		process that does not allow Shibboleth to validate the user's affiliation, and thus, the user will be assigned the "default license", which our
+		account/tenant is configured. 
+		<p>
+		While the majority of our user base was served perfectly by the Shibboleth SSO login process, a good number of thousands did not have the proper
+		onboarding experience, and this created licensing mismatches that became a laborious daily task for us as hundreds of new users were ingressing daily.
+		The challenge was ensuring that the right users have the right licenses, and the reason I developed this script.
+		<p>
 		<pre>
     
 #

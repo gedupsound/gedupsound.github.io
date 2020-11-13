@@ -14,7 +14,7 @@
 		<pre>
 
    AuthType Basic
-   AuthName "Please log in with your DuckID and password to create a new mailing list"
+   AuthName "Please log in with your DomainID and password to create a new mailing list"
    AuthBasicProvider ldap
    AuthLDAPURL "ldaps://ldap.domain.com:636/dc=domain,dc=com?uid?sub?(objectclass=Person)"
    AuthLDAPBindDN "uid=mailman,ou=Services,dc=domain,dc=com"
@@ -27,7 +27,7 @@
 		<pre>
 
    AuthType Basic
-   AuthName "Please log in with your DuckID and password to create a new mailing list"
+   AuthName "Please log in with your DomainID and password to create a new mailing list"
    AuthBasicProvider ldap
    AuthLDAPURL "ldaps://ad.domain.com:636/dc=ad,dc=domain,dc=com?samAccountName?sub?(objectclass=*)"
    AuthLDAPBindDN "cn=is-svc-mailman,ou=Service Accounts,ou=Unmanaged,ou=Users,ou=IS,ou=Units,dc=ad,dc=domain,dc=com"

@@ -12,7 +12,7 @@
 		<h2> Oracle LDAP Bind Syntax </h2>
 		<p>
 		<pre>
-<Location /mailman/create>
+
    AuthType Basic
    AuthName "Please log in with your DuckID and password to create a new mailing list"
    AuthBasicProvider ldap
@@ -20,13 +20,12 @@
    AuthLDAPBindDN "uid=mailman,ou=Services,dc=domain,dc=com"
    AuthLDAPBindPassword "***************"
    Require valid-user
-</Location>
+
 		</pre>
 		<h2> AD LDAP Bind Syntax </h2>
 		<p>
 		<pre>
-LDAPVerifyServerCert off
-<Location /mailman/create>
+
    AuthType Basic
    AuthName "Please log in with your DuckID and password to create a new mailing list"
    AuthBasicProvider ldap
@@ -34,7 +33,7 @@ LDAPVerifyServerCert off
    AuthLDAPBindDN "cn=is-svc-mailman,ou=Service Accounts,ou=Unmanaged,ou=Users,ou=IS,ou=Units,dc=ad,dc=domain,dc=com"
    AuthLDAPBindPassword "****************************"
    Require valid-user
-</Location>
+
 		</pre>
 	</body>
 </html>

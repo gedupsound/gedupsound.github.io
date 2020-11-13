@@ -1,0 +1,39 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	<title>
+		Gabe McGinnis - Mailman Oracle LDAP to AD Bind
+	</title>
+
+	<body>
+		<h1> Mailman Oracle LDAP to AD Bind Change-Over </h1>
+		<p>
+		<h2> Oracle LDAP Bind Syntax </h2>
+		<p>
+		<pre>
+
+   AuthType Basic
+   AuthName "Please log in with your DomainID and password to create a new mailing list"
+   AuthBasicProvider ldap
+   AuthLDAPURL "ldaps://ldap.domain.com:636/dc=domain,dc=com?uid?sub?(objectclass=Person)"
+   AuthLDAPBindDN "uid=mailman,ou=Services,dc=domain,dc=com"
+   AuthLDAPBindPassword "***************"
+   Require valid-user
+
+		</pre>
+		<h2> AD LDAP Bind Syntax </h2>
+		<p>
+		<pre>
+
+   AuthType Basic
+   AuthName "Please log in with your DomainID and password to create a new mailing list"
+   AuthBasicProvider ldap
+   AuthLDAPURL "ldaps://ad.domain.com:636/dc=ad,dc=domain,dc=com?samAccountName?sub?(objectclass=*)"
+   AuthLDAPBindDN "cn=is-svc-mailman,ou=Service Accounts,ou=Unmanaged,ou=Users,ou=IS,ou=Units,dc=ad,dc=domain,dc=com"
+   AuthLDAPBindPassword "****************************"
+   Require valid-user
+
+		</pre>
+	</body>
+</html>

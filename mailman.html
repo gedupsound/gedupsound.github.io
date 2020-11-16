@@ -77,7 +77,7 @@ do
         if [ "$(echo $NOLIST | grep $USER)" ]
         then
             log "$USER found in Domain-IT-Professionals, $USER found in NOLIST, removing from Domain-IT-Professionals."
-            /usr/local/mailman/bin/remove_members is-staff $USER
+            /usr/local/mailman/bin/remove_members Domain-IT-Professionals $USER
         fi
     else
         if [ "$(echo $NOLIST | grep $USER)" ]

@@ -1,0 +1,75 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	<title>
+		Gabe McGinnis - Motorcycles
+	</title>
+
+	<body>
+		<h1> <center> Motorcycles </center> </h1> <p>
+		When developing solutions for our identity management system, to extend into AD or Azure, parameters must be passed in and affect a given user or group that
+    the IDM is aware of. PowerShell makes this rather simple. <br>
+    <p>
+    <pre>
+    # syntax: AzureUserModify.ps1 -DomainID <user> -RevokeAzureSTSRefreshTokens
+
+param(
+        [string] $DomainID = $null,
+        [switch] $RevokeAzureSTSRefreshTokens = $False
+    )
+
+
+# Logging
+$ErrorActionPreference = "Continue"
+$logDir = "C:\logs\azure\"
+$timeStamp = Get-Date -Format "yyyymmdd"
+$logFile = "AzureUserModify_$($timeStamp).log"
+Start-Transcript (Join-Path $logDir $logFile) -Append
+
+
+# Use TLS 1.2 - might be needed for is-toolbox
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+
+$domain = '@domain.com'
+#$domain = '@testprod.domain.com'
+#$domain = '@testdomain.onmicrosoft.com'
+
+
+if ($DomainID -notlike $null)
+    {
+        If ($RevokeAzureSTSRefreshTokens -eq $True)
+            {
+                #PROD
+                #$secpasswd = ConvertTo-SecureString "********************" -AsPlainText -Force
+                #$cred = New-Object System.Management.Automation.PSCredential("is.ids@domain.com", $secpasswd)
+                #Connect-AzureAD -Credential $cred
+
+                #TEST
+                #$secpasswd = ConvertTo-SecureString "********************" -AsPlainText -Force
+                #$cred = New-Object System.Management.Automation.PSCredential("aad-admin@testdomain.onmicrosoft.com", $secpasswd)
+                #Connect-AzureAD -Credential $cred
+
+                $userEmail = $DomainID + $domain
+                Write-Host "$DomainID - Revoking token..."
+                #Get-AzureADUser -ObjectId $userEmail | Revoke-AzureADUserAllRefreshToken
+            }
+        If ($RevokeAzureSTSRefreshTokens -eq $False)
+            {
+                Write-Host "Revoke Token parameter NOT called, no action taken."
+            }
+    }
+
+
+If ($DomainID -like $null)
+    {
+        Write-Host "No DomainID parameter provided, no action taken."
+    }
+
+
+Stop-Transcript
+    </pre>
+		<p>
+	</body>
+</html>

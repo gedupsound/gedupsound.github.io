@@ -11,6 +11,8 @@
 		<p>
 		<h2> Mailman Oracle LDAP Bind Syntax </h2>
 		<p>
+		AD doesn't seem to like DNs that reference an object's UID, as is common practice for Oracle LDAP. See the AuthLDAPBindDN value.
+		<p>
 		<pre>
 
    AuthType Basic
@@ -23,6 +25,8 @@
 
 		</pre>
 		<h2> Mailman AD LDAP Bind Syntax </h2>
+		<p>
+		In this example, UID is replaced by CN for the AuthLDAPBindDN object value.
 		<p>
 		<pre>
 

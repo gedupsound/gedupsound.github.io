@@ -17,7 +17,7 @@
 
    AuthType Basic
    AuthName "Please log in with your DomainID and password to create a new mailing list"
-   AuthBasicProvider ldap \
+   AuthBasicProvider ldap
    AuthLDAPURL "ldaps://ldap.domain.com:636/dc=domain,dc=com?uid?sub?(objectclass=Person)"
    AuthLDAPBindDN "uid=mailman,ou=Services,dc=domain,dc=com"
    AuthLDAPBindPassword "***************"

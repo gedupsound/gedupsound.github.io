@@ -36,8 +36,20 @@
    
 		</pre>
 		
-		<h2> Sendmail Oracle LDAP Bind Syntax </h2>
+		<h2> Sendmail Oracle LDAP Bind Syntax (ldapsearch) </h2>
 		<p>
+		Sendmail is one of those apps where if you provide the the BaseDN of an AD domain namespace, AD provides a referral (see below) that Sendmail translates
+		as an actual ldap server, and errors  when it cannot find the object it is querying for when it uses the referral as an actual LDAP server. Many apps,
+		including those also use ldapsearch ignore the referral given by AD when searching the base of the domain, and work as expected. To avoid the referral
+		issue, simply provide a BaseDN value that includes a top level OU that still provides the proper directory searchbase for auth queries.
+		<p>
+		<pre>
+		
+# search reference
+ref: ldaps://DomainDnsZones.ad.domain.com/DC=DomainDnsZones,DC=ad,DC=domain,DC=com
+
+		</pre>
+			
 		<pre>
 		
 ldapsearch -v -H ldaps://ad.domain.com -D "cn=is-svc-mail,OU=Service Accounts,OU=Unmanaged,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com"

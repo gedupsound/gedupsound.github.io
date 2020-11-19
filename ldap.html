@@ -43,15 +43,14 @@
 		including those also use ldapsearch ignore the referral given by AD when searching the base of the domain, and work as expected. To avoid the referral
 		issue, simply provide a BaseDN value that includes a top level OU that still provides the proper directory searchbase for auth queries.
 		<p>
+		<a href="https://docs.microsoft.com/en-us/troubleshoot/windows-server/identity/ldap-paged-queries-subordinate-referrals-not-chased">LDAP Paged Queries with subordinate referrals are not chased properly</a>
+		<p>
 		<pre>
 		
 # search reference
 ref: ldaps://DomainDnsZones.ad.domain.com/DC=DomainDnsZones,DC=ad,DC=domain,DC=com
 
-		</pre>
-			
-		<pre>
-		
+# ldapsearch work-around (note the DN value following '-b')	
 ldapsearch -v -H ldaps://ad.domain.com -D "cn=is-svc-mail,OU=Service Accounts,OU=Unmanaged,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com"
 -w '*********' -b 'ou=Units,dc=ad,dc=domain,dc=com' -s sub '(samaccountname=gabe)' objectClass AD-EmailForwardingAddress
 		

@@ -15,7 +15,7 @@
 
    AuthType Basic
    AuthName "Please log in with your DomainID and password to create a new mailing list"
-   AuthBasicProvider ldap
+   AuthBasicProvider ldap \
    AuthLDAPURL "ldaps://ldap.domain.com:636/dc=domain,dc=com?uid?sub?(objectclass=Person)"
    AuthLDAPBindDN "uid=mailman,ou=Services,dc=domain,dc=com"
    AuthLDAPBindPassword "***************"
@@ -33,7 +33,16 @@
    AuthLDAPBindDN "cn=is-svc-mailman,ou=Service Accounts,ou=Unmanaged,ou=Users,ou=IS,ou=Units,dc=ad,dc=domain,dc=com"
    AuthLDAPBindPassword "****************************"
    Require valid-user
-
+   
+		</pre>
+		
+		<h2> Sendmail Oracle LDAP Bind Syntax </h2>
+		<p>
+		<pre>
+		
+ldapsearch -v -H ldaps://ad.domain.com -D "cn=is-svc-mail,OU=Service Accounts,OU=Unmanaged,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com"
+-w '*********' -b 'ou=Units,dc=ad,dc=domain,dc=com' -s sub '(samaccountname=gabe)' objectClass AD-EmailForwardingAddress
+		
 		</pre>
 	</body>
 </html>

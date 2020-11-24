@@ -32,28 +32,25 @@ Start-Transcript (Join-Path $logDir $logFile) -Append
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 
-$domain = '@domain.com'
-#$domain = '@testprod.domain.com'
-#$domain = '@testdomain.onmicrosoft.com'
-
-
 if ($DomainID -notlike $null)
     {
         If ($RevokeAzureSTSRefreshTokens -eq $True)
             {
-                #PROD
-                #$secpasswd = ConvertTo-SecureString "********************" -AsPlainText -Force
-                #$cred = New-Object System.Management.Automation.PSCredential("is.ids@domain.com", $secpasswd)
-                #Connect-AzureAD -Credential $cred
+                $upn = get-aduser $DuckID | select -ExpandProperty UserPrincipalName
+		
+		#PROD
+                $secpasswd = ConvertTo-SecureString "********************" -AsPlainText -Force
+                $cred = New-Object System.Management.Automation.PSCredential("is.ids@domain.com", $secpasswd)
+                Connect-AzureAD -Credential $cred
 
                 #TEST
                 #$secpasswd = ConvertTo-SecureString "********************" -AsPlainText -Force
                 #$cred = New-Object System.Management.Automation.PSCredential("aad-admin@testdomain.onmicrosoft.com", $secpasswd)
                 #Connect-AzureAD -Credential $cred
-
-                $userEmail = $DomainID + $domain
+		
+		Write-Host "UserPrincipalName: $upn"
                 Write-Host "$DomainID - Revoking token..."
-                #Get-AzureADUser -ObjectId $userEmail | Revoke-AzureADUserAllRefreshToken
+                Get-AzureADUser -ObjectId $userEmail | Revoke-AzureADUserAllRefreshToken
             }
         If ($RevokeAzureSTSRefreshTokens -eq $False)
             {

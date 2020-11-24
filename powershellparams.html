@@ -50,7 +50,7 @@ if ($DomainID -notlike $null)
 		
 		Write-Host "UserPrincipalName: $upn"
                 Write-Host "$DomainID - Revoking token..."
-                Get-AzureADUser -ObjectId $userEmail | Revoke-AzureADUserAllRefreshToken
+                Get-AzureADUser -ObjectId $upn | Revoke-AzureADUserAllRefreshToken
             }
         If ($RevokeAzureSTSRefreshTokens -eq $False)
             {

@@ -36,7 +36,7 @@
 - name: Create container
   proxmox:
     node: prox
-    api_user: root@pam
+    api_user: account@pam
     api_password: *********************
     api_host: prox
     password: '{{ VM_pass }}'
@@ -51,7 +51,7 @@
 - name: Start container
   community.general.proxmox_kvm:
     node: prox
-    api_user: root@pam
+    api_user: account@pam
     api_password: *********************
     api_host: prox
     name: '{{ VM_hostname }}'

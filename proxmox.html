@@ -1,0 +1,63 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	<title>
+		Gabe McGinnis - Proxmox Linux Container Creation with Ansible
+	</title>
+
+	<body>
+		<center><h1>Proxmox Linux Container Creation with Ansible</h1><center> <p>
+		
+    <pre>
+    
+# prox-lxc-create-prompt.yml
+############################
+---
+- name: LXC Creation - Input required...
+  hosts: proxmox
+  vars_prompt:
+    - name: VM_pass
+      prompt: "Enter password for container root user"
+      private: yes
+    - name: VM_hostname
+      prompt: "Enter hostname for the container"
+      private: no
+    - name: VM_unprivileged
+      prompt: "Does the container need to mount drives (enter [true|false])"
+      private: no
+  roles:
+    - prox-lxc-create-prompt
+    
+    
+# prox-lxc-create-prompt/tasks/main.yml
+#######################################
+---
+- name: Create container
+  proxmox:
+    node: prox
+    api_user: root@pam
+    api_password: *********************
+    api_host: prox
+    password: '{{ VM_pass }}'
+    disk: 8
+    hostname: '{{ VM_hostname }}'
+    ostemplate: 'local:vztmpl/centos-7-default_20190926_amd64.tar.xz'
+    netif: '{"net0":"name=eth0,ip=dhcp,bridge=vmbr0"}'
+    unprivileged: '{{ VM_unprivileged }}'
+- name: Start container
+  wait_for:
+    timeout: 30
+- name: Start container
+  community.general.proxmox_kvm:
+    node: prox
+    api_user: root@pam
+    api_password: *********************
+    api_host: prox
+    name: '{{ VM_hostname }}'
+    state: started
+    
+    </pre>
+    
+	</body>
+</html>

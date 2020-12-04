@@ -36,8 +36,8 @@
 - name: Create container
   proxmox:
     node: prox
-    api_user: account@pam
-    api_password: *********************
+    api_user: root@pam
+    api_password: *******************
     api_host: prox
     password: '{{ VM_pass }}'
     disk: 8
@@ -46,17 +46,17 @@
     netif: '{"net0":"name=eth0,ip=dhcp,bridge=vmbr0"}'
     unprivileged: '{{ VM_unprivileged }}'
 - name: Start container
-  wait_for:
-    timeout: 30
-- name: Start container
-  community.general.proxmox_kvm:
+  proxmox:
     node: prox
-    api_user: account@pam
-    api_password: *********************
+    api_user: root@pam
+    api_password: *******************
     api_host: prox
-    name: '{{ VM_hostname }}'
+    hostname: '{{ VM_hostname }}'
     state: started
-    
+- name: Wait 15 seconds
+  wait_for:
+    timeout: 15
+
     </pre>
     
 	</body>

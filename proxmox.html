@@ -37,7 +37,7 @@
   proxmox:
     node: prox
     api_user: root@pam
-    api_password: *******************
+    api_password: **********************
     api_host: prox
     password: '{{ VM_pass }}'
     disk: 8
@@ -45,17 +45,32 @@
     ostemplate: 'local:vztmpl/centos-7-default_20190926_amd64.tar.xz'
     netif: '{"net0":"name=eth0,ip=dhcp,bridge=vmbr0"}'
     unprivileged: '{{ VM_unprivileged }}'
+- name: Wait 15 seconds
+  wait_for:
+    timeout: 15
 - name: Start container
   proxmox:
     node: prox
     api_user: root@pam
-    api_password: *******************
+    api_password: **********************
     api_host: prox
     hostname: '{{ VM_hostname }}'
     state: started
 - name: Wait 15 seconds
   wait_for:
     timeout: 15
+- name: Retrieve VMID of provisioned container
+  shell: pct list | grep -i {{ VM_hostname }} | cut -f1 -d ' '
+  register: VMID
+- debug: msg="{{VMID.stdout}}"
+- name: Update/upgrade container
+  shell: pct exec {{ VMID.stdout }} -- bash -c 'yum update -y && yum upgrade -y'
+- name: Install openssh-server
+  shell: pct exec {{ VMID.stdout }} -- bash -c 'yum install openssh-server -y'
+- name: Enable sshd
+  shell: pct exec {{ VMID.stdout }} -- bash -c 'systemctl enable sshd'
+- name: Start sshd
+  shell: pct exec {{ VMID.stdout }} -- bash -c 'systemctl start sshd'
 
     </pre>
     

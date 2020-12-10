@@ -47,7 +47,7 @@ QUERY=$(ldapsearch \
  --bindDN "CN=is-svc-listsmodify,OU=Service Accounts,OU=Unmanaged,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com" \
  --bindPassword '...' \
  --baseDN 'OU=Managed,OU=Users,OU=IS,OU=Units,DC=ad,DC=domain,DC=com' \
- --scope sub "(|(AD-UoPersonAffiliation=staff)(AD-UoPersonAffiliation=administrative faculty))" UserPrincipalName | sed '/^dn:/d';'/^#/d';'s/userPrincipalName: //';sed '/^$/d')
+ --scope sub "(|(AD-PersonAffiliation=staff)(AD-PersonAffiliation=administrative faculty))" UserPrincipalName | sed '/^dn:/d';'/^#/d';'s/userPrincipalName: //';sed '/^$/d')
 
 # Conditional logic, looking for a user membership in IS groups, if they are not found to be members, they will be added to each respective group
 for USER in $QUERY

@@ -37,7 +37,7 @@
   proxmox:
     node: prox
     api_user: root@pam
-    api_password: **********************
+    api_password: ********************************
     api_host: prox
     password: '{{ VM_pass }}'
     disk: 8
@@ -52,7 +52,7 @@
   proxmox:
     node: prox
     api_user: root@pam
-    api_password: **********************
+    api_password: ********************************
     api_host: prox
     hostname: '{{ VM_hostname }}'
     state: started
@@ -65,12 +65,30 @@
 - debug: msg="{{VMID.stdout}}"
 - name: Update/upgrade container
   shell: pct exec {{ VMID.stdout }} -- bash -c 'yum update -y && yum upgrade -y'
+- name: Install vim-enhanced
+  shell: pct exec {{ VMID.stdout }} -- bash -c 'yum install vim-enhanced -y'
 - name: Install openssh-server
   shell: pct exec {{ VMID.stdout }} -- bash -c 'yum install openssh-server -y'
 - name: Enable sshd
   shell: pct exec {{ VMID.stdout }} -- bash -c 'systemctl enable sshd'
 - name: Start sshd
   shell: pct exec {{ VMID.stdout }} -- bash -c 'systemctl start sshd'
+- name: Set timezone/localtime - 1/2 - Remove default symlink for /etc/localtime
+  shell: pct exec {{ VMID.stdout }} -- bash -c 'rm etc/localtime -f'
+- name: Set timezone/localtime - 2/2 - Set symlink US/Pacific for /etc/localtime
+  shell: pct exec {{ VMID.stdout }} -- bash -c 'ln -s /usr/share/zoneinfo/US/Pacific /etc/localtime'
+- name: Reboot
+  shell: pct exec {{ VMID.stdout }} -- bash -c 'reboot'
+- name: Wait 15 seconds
+  wait_for:
+    timeout: 15
+- name: Configure root user .bashrc (green prompt)
+  lineinfile:
+    path: /root/.bashrc
+    regexp: '^export PS1="[\[\e[32m\]\u\[\e[m\]@\[\e[32m\]\h\[\e[m\] \[\e[32m\]\w\[\e[m\]] "'
+    state: present
+    line: export PS1="[\[\e[32m\]\u\[\e[m\]@\[\e[32m\]\h\[\e[m\] \[\e[32m\]\w\[\e[m\]] "
+
 
     </pre>
     

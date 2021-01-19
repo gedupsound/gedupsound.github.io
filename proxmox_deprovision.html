@@ -1,1 +1,96 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	<title>
+		Gabe McGinnis - Proxmox LXC Deprovision - Ansible
+	</title>
 
+	<body>
+		<h1> <center> Proxmox LXC Deprovision - Ansible </center> </h1> <p>
+    <p>
+    <pre>
+    
+# prox-deprovision.yml
+######################
+---
+- name: Prox - Get list of VMIDs
+  hosts: proxmox
+  pre_tasks:
+    - name:
+      shell: pct list
+      register: PCTLIST
+    - name: Debug - PCTLIST.stdout_lines
+      debug:
+        var: PCTLIST.stdout_lines
+- name: LXC De-provision - Input required...
+  hosts: proxmox
+  vars_prompt:
+    - name: VM_VMID
+      prompt: "Enter VMID to delete"
+      private: no
+  roles:
+    - prox-deprovision
+- name: DNS entry removal (pihole1)
+  hosts: pihole
+  roles:
+    - pihole-dnsRemoval
+
+
+
+# prox-deprovision/tasks/main.yml
+#################################
+---
+- name: Debug - VM_VMID var
+  debug:
+    var: VM_VMID
+#- name: Get vm/lxc pct info
+#  shell: "pct list | grep {{ VM_VMID }}"
+#  register: VM_PCTLINE
+- name: Get vm/lxc hostname
+  shell: pct list | grep {{ VM_VMID }} | awk -F ' ' '{print $3}'
+  register: VM_HOSTNAME
+- name: Debug - VM_HOSTNAME.stdout
+  debug:
+    var: VM_HOSTNAME.stdout
+- name: Destroy VM/LXC
+  shell: pct destroy {{ VM_VMID }} --force
+  register: DESTROYRESULTS
+- debug: msg="{{DESTROYRESULTS.stdout_lines}}"
+
+
+
+# pihole-dnsRemoval/tasks/main.yml
+##################################
+---
+- name: Get contents of lan.list
+  shell: cat /etc/pihole/lan.list
+  register: LANLISTRESULTS
+- name: Debug - LANLISTRESULTS var
+  debug:
+    var: LANLISTRESULTS.stdout_lines
+- name: Debug - hostvars - proxmox - VM_HOSTNAME.stdout
+  debug: msg="{{hostvars['proxmox']['VM_HOSTNAME']['stdout']}}"
+ # debug:
+ #   var: hostvars[proxmox][VM_HOSTNAME][stdout]
+- name: TEST - Remove entry from lan.list
+  shell: sed '/{{hostvars['proxmox']['VM_HOSTNAME']['stdout']}}/d' /etc/pihole/lan.list
+  register: SEDTESTRESULT
+- name: Debug - SEDTESTRESULT.stdout_lines
+  debug:
+    var: SEDTESTRESULT.stdout_lines
+- name: Remove entry from lan.list
+  shell: sed -i '/{{hostvars['proxmox']['VM_HOSTNAME']['stdout']}}/d' /etc/pihole/lan.list
+- name: Re-check lan.list
+  shell: cat /etc/pihole/lan.list
+  register: POSTLANLISTRESULTS
+- name: Debug - POSTLANLISTRESULTS
+  debug:
+    var: POSTLANLISTRESULTS.stdout_lines
+- name: Restart dnsservice
+  shell: pihole restartdns
+
+    </pre>
+    <p>
+	</body>
+</html>

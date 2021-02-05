@@ -1,0 +1,436 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	<title>
+		Gabe McGinnis - O365 Admin Task Tool
+	</title>
+
+	<body>
+		<h1> <center> O365 Admin Task Tool - PowerShell</center> </h1> <p>
+		<p>
+		<pre>
+    
+######################################################################################
+#
+#                 <<<<<<<<<< Office 365 Admin Task Tool >>>>>>>>>>
+#
+#                 Created by: Gabe McGinnis
+#
+#                 Purpose: Consolidated automated solution for common Office 365
+#                          administrative tasks for Global Admins
+#
+######################################################################################
+
+
+#########################################
+# Rename O365 user object function PROD #
+#########################################
+
+function RenameUserPROD
+    {
+        Write-Host
+        Write-Host
+        Write-Host "Starting Renaming Office 365 Online User Task (PROD)..."
+        Write-Host
+        $currentDomainID = Read-Host "Please provide the current DomainID for the user object you want to rename"
+        Write-Host "Current DomainID"     $currentDomainID
+        Write-Host
+        Write-Host
+        $newDomainID = Read-Host "Please provide the new DomainID for the user object"
+        Write-Host "New DomainID username you want to change"     $newDomainID
+        Write-Host
+        Write-Host
+        $proceedyn = Read-Host "Rename Online Tenant User - are the following settings correct? [Y*/N]"
+
+        If ($proceedyn -eq "N" -or $proceedyn -eq "n")
+	        {
+		        Write-Host "Returning to Main Menu..."
+                $n = 0
+	        }
+            else
+                {
+                    # Initiate MS Online Session
+                    $secpasswd = ConvertTo-SecureString "*******************" -AsPlainText -Force
+                    $msolcred = New-Object System.Management.Automation.PSCredential("aad-svc-idmagent@domain.com", $secpasswd)
+                    Connect-MsolService -credential $msolcred
+                    $Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $msolcred -Authentication Basic -AllowRedirection
+                    Import-PSSession $Session
+
+                    # Checking to see if the current user name exists, as a visual verification. No actual verification logic in-place
+                    $existingUser = Get-MsolUser -UserPrincipalName "$currentDomainID@domain.com"
+                    Write-Host "Pre-verify for username selection"
+                    $existingUser
+                    Write-Host
+                    Write-Host
+                    Start-Sleep -Seconds 3
+
+                    # Changes the UPN for the user object in the online tenant space
+                    Set-MsolUserPrincipalName -UserPrincipalName "$currentDomainID@domain.com" -NewUserPrincipalName "$newDomainID@domain.com"
+                    Write-Host "Username change command initiated."
+                    Write-Host
+                    Write-Host
+                    Start-Sleep -Seconds 3
+
+
+                    # Post-verify for user change
+                    $newUser = Get-MsolUser -UserPrincipalName "$newDomainID@domain.com"
+                    Write-Host "Post-verify for username change"
+                    $newUser
+
+                    $RenameComplete = Read-Host "Rename Online Tenant User - COMPLETE [Press ENTER]"
+
+                    switch ($RenameComplete)
+                        {
+                            default {$n= 0}
+                        }
+                }
+    }
+
+
+
+###################################
+# Delegate OneDrive Function PROD # 
+###################################
+
+function DelegateOneDrivePROD
+    {
+        Write-Host
+        Write-Host
+        Write-Host "Starting OneDrive Delegation Task (PROD)..."
+        Write-Host
+        $OneDriveDomainID = Read-Host "Please provide a OneDrive UPN you want to delegate (Example: <user>@domain.com)"
+        Write-Host "User OneDrive you want to delegate"     $OneDriveDomainID
+        Write-Host
+        Write-Host
+        $OneDriveDelegate = Read-Host "Please provide a UPN to delegate acess to (Example: <user>@domain.com)"
+        Write-Host "User you want to grant Admin access to above OneDrive"     $OneDriveDelegate
+        Write-Host
+        Write-Host
+        $secpasswd = ConvertTo-SecureString "********************" -AsPlainText -Force
+        $objCreds = New-Object System.Management.Automation.PSCredential("aad-svc-idmagent@domain.com", $secpasswd)
+
+
+        $OneDriveDomainID = $OneDriveDomainID -replace "[@.]","_"
+        $OneDriveDelegate = $OneDriveDelegate -replace "[@.]","_"
+
+        # $OneDriveDomainID = $OneDriveDomainID.replace(".","_")
+        # $OneDriveDomainID = $OneDriveDomainID.replace("@","_")
+
+        # $OneDriveDelegate = $OneDriveDelegate.replace(".","_")
+        # $OneDriveDelegate = $OneDriveDelegate.replace("@","_")
+
+        Connect-SPOService -Url https://domain-admin.sharepoint.com -credential $objCreds
+
+        Set-SPOUser -Site https://domain-my.sharepoint.com/personal/"$OneDriveDomainID"/ -LoginName $OneDriveDelegate -IsSiteCollectionAdmin $true
+        #now browse to https://domain-my.sharepoint.com/personal/<userDomainID>domain_edu and you should be able see all files therein
+
+        $OneDriveDelegateComplete = Read-Host "OneDrive Delegation - COMPLETE [Press ENTER]"
+
+            switch ($OneDriveDelegateComplete)
+                {
+                    default {$n= 0}
+                }
+
+    }
+
+
+########################
+# Username Verify PROD #
+########################
+
+
+function UsernameVerifyPROD
+    {
+        Write-Host
+        Write-Host
+        Write-Host "Starting Username Verification (Prod)..."
+        Write-Host
+        $DomainIDPROD = Read-Host "Please provide the a DomainID to verify existence in local AD (AD) and Office365 (domain)"
+        Write-Host "Username verification for"     $DomainIDPROD
+        Write-Host
+        Write-Host
+        $proceedyn = Read-Host "Are the following settings correct? [Y*/N]"     $DomainIDPROD
+
+        If ($proceedyn -eq "N" -or $proceedyn -eq "n")
+	        {
+		        Write-Host "Returning to Main Menu..."
+                $n = 0
+	        }
+            else
+                {
+                    #AD check
+                    Write-Host "Verifying username against ad.domain.com..."
+                    Write-Host ""
+                    Write-Host ""
+                    get-aduser $DomainIDPROD
+                    
+                    #office365 check
+                    $secpasswd = ConvertTo-SecureString "******************" -AsPlainText -Force
+                    $msolcred = New-Object System.Management.Automation.PSCredential("aad-svc-idmagent@domain.com", $secpasswd)
+                    Connect-MsolService -Credential $msolcred
+
+                    #create UPNs from the DomainID entered by user
+                    $DomainIDdomainUPN = $DomainIDPROD + '@domain.com'
+                    $DomainIDADdomainUPN = $DomainIDPROD + '@ad.domain.com'
+
+                    #lookups
+                    Write-Host "Verifying username on Office365 (domain tenant) for @domain.com domain suffix..."
+                    Write-Host ""
+                    Write-Host ""
+                    Get-MsolUser -UserPrincipalName $DomainIDdomainUPN
+                    Write-Host "Verifying username on Office365 (domain tenant) for @ad.domain.com domain suffix..."
+                    Write-Host ""
+                    Write-Host ""                    
+                    Get-MsolUser -UserPrincipalName $DomainIDADdomainUPN
+                    Write-Host ""
+                    Write-Host ""
+
+                    #ending function
+                    $OneDriveDelegateComplete = Read-Host "Username verification (Prod) - COMPLETE [Press ENTER]"
+
+                    switch ($UsernameVerifyPRODComplete)
+                        {
+                            default {$n= 0}
+                        }
+                }
+    }
+
+
+
+
+#########################################
+# Rename O365 user object function TEST #
+#########################################
+
+function RenameUserTEST
+    {
+        Write-Host
+        Write-Host
+        Write-Host "Starting Renaming Office 365 Online User Task (TEST)..."
+        Write-Host
+        $currentDomainID = Read-Host "Please provide the current UPN for the user object you want to rename (Example: <user>@365.onmicrosoft.com)"
+        Write-Host "Current DomainID"     $currentUPN
+        Write-Host
+        Write-Host
+        $newDomainID = Read-Host "Please provide the new DomainID for the user object"
+        Write-Host "New DomainID username you want to change"     $newUPN
+        Write-Host
+        Write-Host
+        $proceedyn = Read-Host "Rename Online Tenant User - are the following settings correct? [Y*/N]"
+
+        If ($proceedyn -eq "N" -or $proceedyn -eq "n")
+	        {
+		        Write-Host "Returning to Main Menu..."
+                $n = 0
+	        }
+            else
+                {
+                    # Initiate MS Online Session
+                    #$msolcred = Get-Credential
+                    $secpasswd = ConvertTo-SecureString "*******************" -AsPlainText -Force
+                    $msolcred = New-Object System.Management.Automation.PSCredential("aad-admin@365.onmicrosoft.com", $secpasswd)
+
+                    Connect-MsolService -Credential $msolcred
+                    $Session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $msolcred -Authentication Basic -AllowRedirection
+                    Import-PSSession $Session
+
+                    # Checking to see if the current user name exists, as a visual verification. No actual verification logic in-place
+                    $existingUser = Get-MsolUser -UserPrincipalName "$currentUPN"
+                    Write-Host "Pre-verify for username selection"
+                    $existingUser
+                    Write-Host
+                    Write-Host
+
+                    # Changes the UPN for the user object in the online tenant space
+                    Write-Host "Username change command initiated."
+                    Set-MsolUserPrincipalName -UserPrincipalName "$currentUPN" -NewUserPrincipalName "$newUPN"
+                    Write-Host
+                    Write-Host
+
+
+                    # Post-verify for user change
+                    $newUser = Get-MsolUser -UserPrincipalName "$newUPN"
+                    Write-Host "Post-verify for username change"
+                    $newUser
+
+                    $RenameComplete = Read-Host "Rename Online Tenant User - COMPLETE [Press ENTER]"
+
+                    switch ($RenameComplete)
+                        {
+                            default {$n= 0}
+                        }
+                }
+    }
+
+
+
+###################################
+# Delegate OneDrive Function TEST #
+###################################
+
+
+function DelegateOneDriveTEST
+    {
+        Write-Host
+        Write-Host
+        Write-Host "Starting OneDrive Delegation Task (TEST)..."
+        Write-Host
+        $OneDriveDomainID = Read-Host "Please provide the current UPN for the user object you want to rename (Example: <user>@365.onmicrosoft.com)"
+        Write-Host "User OneDrive you want to delegate"     $OneDriveDomainID
+        Write-Host
+        Write-Host
+        $OneDriveDelegate = Read-Host "Please provide a UPN to delegate acess to (Example: <user>@domain.com)"
+        Write-Host "User you want to grant Admin access to above OneDrive"     $OneDriveDelegate
+        Write-Host
+        Write-Host
+        #$objCreds = Get-Credential #provide global admin credentials for the online tenant space
+        $secpasswd = ConvertTo-SecureString "********************" -AsPlainText -Force
+        $objCreds = New-Object System.Management.Automation.PSCredential("aad-admin@365.onmicrosoft.com", $secpasswd)
+
+        $OneDriveDomainID = $OneDriveDomainID -replace "[@.]","_"
+        $OneDriveDelegate = $OneDriveDelegate -replace "[@.]","_"
+
+        # $OneDriveDomainID = $OneDriveDomainID.replace(".","_")
+        # $OneDriveDomainID = $OneDriveDomainID.replace("@","_")
+
+        # $OneDriveDelegate = $OneDriveDelegate.replace(".","_")
+        # $OneDriveDelegate = $OneDriveDelegate.replace("@","_")
+
+        Connect-SPOService -Url https://365-admin.sharepoint.com -credential $objCreds
+
+        Set-SPOUser -Site https://365-my.sharepoint.com/personal/$OneDriveDomainID/ -LoginName $OneDriveDelegate -IsSiteCollectionAdmin $true
+        #now browse to https://365-my.sharepoint.com/personal/<DomainID>_365_onmicrosoft_com and you should be able see all files therein
+
+        $OneDriveDelegateComplete = Read-Host "OneDrive Delegation - COMPLETE [Press ENTER]"
+
+            switch ($OneDriveDelegateComplete)
+                {
+                    default {$n= 0}
+                }
+
+    }
+
+
+########################
+# Username Verify TEST #
+########################
+
+
+function UsernameVerifyTEST
+    {
+        Write-Host
+        Write-Host
+        Write-Host "Starting Username Verification (TEST)..."
+        Write-Host
+        $DomainID1 = Read-Host "Please provide the a DomainID to verify existence in local AD (ALAB) and Office365 (365)"
+        Write-Host "Username verification for"     $DomainID1
+        Write-Host
+        Write-Host
+        $proceedyn = Read-Host "Are the following settings correct? [Y*/N]"     $DomainID1
+
+        If ($proceedyn -eq "N" -or $proceedyn -eq "n")
+	        {
+		        Write-Host "Returning to Main Menu..."
+                $n = 0
+	        }
+            else
+                {
+                    #ALAB check
+
+                    
+                    #office365 check
+                    $secpasswd = ConvertTo-SecureString "*******************" -AsPlainText -Force
+                    $msolcred = New-Object System.Management.Automation.PSCredential("aad-admin@365.onmicrosoft.com", $secpasswd)
+                    Connect-MsolService -Credential $msolcred
+
+                    #create UPNs from the DomainID entered by user
+                    $DomainID1365UPN = $DomainID1 + '@365.onmicrosoft.com'
+                    $DomainID1AlabUPN = $DomainID1 + '@alab.mslab.domain.com'
+
+                    #lookups
+                    Write-Host "Verifying username on Office365 (365 tenant) for @365.onmicrosoft.com domain suffix..."
+                    Write-Host ""
+                    Write-Host ""
+                    Get-MsolUser -UserPrincipalName $DomainID1365UPN
+                    Write-Host "Verifying username on Office365 (365 tenant) for @alab.mslab.domain.com domain suffix..."
+                    Write-Host ""
+                    Write-Host ""                    
+                    Get-MsolUser -UserPrincipalName $DomainID1AlabUPN
+                    Write-Host ""
+                    Write-Host ""
+
+                    #ending function
+                    $OneDriveDelegateComplete = Read-Host "Username verification (Test) - COMPLETE [Press ENTER]"
+
+                    switch ($UsernameVerifyTESTComplete)
+                        {
+                            default {$n= 0}
+                        }
+                }
+    }
+
+
+#######################
+# Main Menu Interface #
+#######################
+
+
+# Variable to control jumping to main interface and to exit out of the script. You will see this used in the functions to return to Main menu
+# value of 0 will direct the script back to the main menu
+
+$n = 0
+
+while ($n -eq 0) 
+    {
+
+        #Clear-Host
+
+        Write-Host "**************************************************************"
+        Write-Host "*"
+        Write-Host "*                 Office 365 Admin Task Tool"
+        Write-Host "*"
+        Write-Host "*"
+        Write-Host "*"
+        Write-Host "* What would you like to do?"
+        Write-Host "*"
+        Write-Host "* Prod:"
+        Write-Host "*"
+        Write-Host "* 1) Rename an Online user object (Prod)"
+        Write-Host "* 2) Delegate user object OneDrive Access (Prod)"
+        Write-Host "* 3) Username verification (Prod)"
+        Write-Host "*"
+        Write-Host "* Test:"
+        Write-Host "*"
+        Write-Host "* 4) Rename an Online user object (Test)"
+        Write-Host "* 5) Delegate user object OneDrive Access (Test)"
+        Write-Host "* 6) Username verification (Test)"
+        Write-Host "*"
+        Write-Host "* Other:"
+        Write-Host "*"
+        Write-Host "* 7) Quit" 
+        Write-Host "*"
+        Write-Host "**************************************************************"
+
+
+        $NumberInput = Read-Host "Please enter selection choice (1-7) [Quit]"
+
+        switch ($NumberInput)
+            {
+                1 { RenameUserPROD }
+                2 { DelegateOneDrivePROD }
+                3 { UsernameVerifyPROD }
+                4 { RenameUserTEST }
+                5 { DelegateOneDriveTEST }
+                6 { UsernameVerifyTEST }
+                7 { Write-Host "Quitting...";$n = 99}
+	            default { Write-Host "Quitting...";$n = 99}
+            }
+
+    } 
+
+    
+    </pre>
+		<p>
+	</body>
+</html>

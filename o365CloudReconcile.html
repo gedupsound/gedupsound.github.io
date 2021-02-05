@@ -1,0 +1,284 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	<title>
+		Gabe McGinnis - Office 365 Cloud License Reconcile (old logic) - PowerShell
+	</title>
+
+	<body>
+		<h1> <center> Office 365 Cloud License Reconcile (old logic) - PowerShell </center> </h1> <p>
+
+When we first rolled out Office 365 for organization wide, we knew only to write our own logic that was initiated
+from our central identity management platform. This script was primarily to designed to ensure user objects in the
+cloud had their appropriate licenses.
+
+<pre>
+
+################################################################################
+###
+### CloudReconcile.ps1
+###
+### Date: June 16th, 2015
+###
+################################################################################
+
+################################################################################
+#Global Variables
+import-module activedirectory
+import-module MSOnline
+
+# flag vars
+#$flagFaculty = $false
+#$flagStudents = $false
+#$flagEarlyBirds = $false
+
+# license vars
+$lic1Faculty = "o365Domain:OFFICESUBSCRIPTION_FACULTY"
+$lic2Faculty = "o365Domain:STANDARDWOFFPACK_IW_FACULTY"
+$lic3Faculty = "o365Domain:POWER_BI_STANDARD"
+$lic1Early = "o365Domain:OFFICESUBSCRIPTION_FACULTY"
+$lic2Early = "o365Domain:STANDARDWOFFPACK_IW_FACULTY"
+$lic3Early = "o365Domain:POWER_BI_STANDARD"
+$lic1Student = "o365Domain:OFFICESUBSCRIPTION_STUDENT"
+$lic2Student = "o365Domain:STANDARDWOFFPACK_IW_STUDENT"
+$lic3Student = "o365Domain:POWER_BI_STANDARD"
+
+# license options
+$licenseStudentPrimary = New-MsolLicenseOptions -AccountSkuId o365Domain:OFFICESUBSCRIPTION_STUDENT #-DisabledPlans OFFICE_FORMS_PLAN_2
+$licenseStudentSecondary = New-MsolLicenseOptions -AccountSkuId o365Domain:STANDARDWOFFPACK_IW_STUDENT -DisabledPlans AAD_BASIC_EDU,SCHOOL_DATA_SYNC_P1,TEAMS1,INTUNE_O365,FLOW_O365_P2,POWERAPPS_O365_P2,RMS_S_ENTERPRISE,OFFICE_FORMS_PLAN_2,PROJECTWORKMANAGEMENT,SWAY,YAMMER_EDU,OFFICESUBSCRIPTION,SHAREPOINTWAC_EDU,SHAREPOINTSTANDARD_EDU,EXCHANGE_S_STANDARD,MCOSTANDARD
+$licenseFacultyPrimary = New-MsolLicenseOptions -AccountSkuId o365Domain:OFFICESUBSCRIPTION_FACULTY #-DisabledPlans OFFICE_FORMS_PLAN_2
+$licenseFacultySecondary = New-MsolLicenseOptions -AccountSkuId o365Domain:STANDARDWOFFPACK_IW_FACULTY -DisabledPlans AAD_BASIC_EDU,SCHOOL_DATA_SYNC_P1,TEAMS1,INTUNE_O365,FLOW_O365_P2,POWERAPPS_O365_P2,RMS_S_ENTERPRISE,OFFICE_FORMS_PLAN_2,PROJECTWORKMANAGEMENT,SWAY,YAMMER_EDU,OFFICESUBSCRIPTION,SHAREPOINTWAC_EDU,SHAREPOINTSTANDARD_EDU,EXCHANGE_S_STANDARD,MCOSTANDARD
+$licenseEarlyPrimary = New-MsolLicenseOptions -AccountSkuId o365Domain:OFFICESUBSCRIPTION_FACULTY #-DisabledPlans OFFICE_FORMS_PLAN_2
+$licenseEarlySecondary = New-MsolLicenseOptions -AccountSkuId o365Domain:STANDARDWOFFPACK_IW_FACULTY -DisabledPlans AAD_BASIC_EDU,SCHOOL_DATA_SYNC_P1,TEAMS1,INTUNE_O365,FLOW_O365_P2,POWERAPPS_O365_P2,RMS_S_ENTERPRISE,OFFICE_FORMS_PLAN_2,PROJECTWORKMANAGEMENT,SWAY,YAMMER_EDU,OFFICESUBSCRIPTION,SHAREPOINTWAC_EDU,SHAREPOINTSTANDARD_EDU,EXCHANGE_S_STANDARD
+
+
+$logfile=new-object System.IO.StreamWriter("c:\scripts\logs\CloudReconcile.log",1);
+if ($logfile -ne $null) {
+  $logfile.writeline((get-date).tostring() +"  Starting Reconcile");
+}
+
+# msolservice login
+$secpasswd = ConvertTo-SecureString "*****************************" -AsPlainText -Force
+$creds = New-Object System.Management.Automation.PSCredential("aad-svc-idmagent@o365Domain.edu", $secpasswd)
+
+Connect-MsolService -Credential $creds
+
+$logfile.writeline((get-date).tostring() + "  Getting licensed users.");
+
+$licensedUsersList = Get-MsolUser -All | Where-Object { $_.isLicensed -eq "TRUE" };
+
+$logfile.writeline((get-date).tostring() + "  Done getting licensed office 365 users.");
+
+$logfile.writeline((get-date).tostring() + "  licensed users returned: " + ($licensedUsersList).Count);
+
+foreach ($licensedUser in $licensedUsersList) {
+  $accountName = $licensedUser.UserPrincipalName.split("@")[0];
+  $o365userUPN = $licensedUser.UserPrincipalName
+  $logfile.writeline((get-date).tostring() + "  found user: " + $accountName);
+
+  # gather cloud licenses
+  $o365msoluserSKU = (Get-MsolUser -UserPrincipalName $o365userUPN).licenses.AccountSkuId
+
+  # $Missinglicenseflag var, flipped to $True if one of the licenses is missing in $o365msoluserSKU
+  $MissingLicenseFlag = $False
+
+  If (dsquery user -samid $accountName)
+    {
+      $usergroups = (get-aduser $accountName -Properties MemberOf | select MemberOf).MemberOf | % {$_.split(",")[0].replace("CN=","")}
+      $logfile.writeline((get-date).tostring() + "  Groups found: " + $accountName);
+
+      if ($usergroups -contains "o365")
+        {
+          $logfile.writeline((get-date).tostring() + "  found o365 in " + $accountName);
+
+          if ($o365msoluserSKU)
+            {
+              if ($o365msoluserSKU -notcontains $lic1Faculty)
+                {
+                  Write-Host "lic1 NOT present, flip flag to TRUE"
+                  $MissingLicenseFlag = $True
+                }
+              if ($o365msoluserSKU -notcontains $lic2Faculty)
+                {
+                  Write-Host "lic2 NOT present, flip flag to TRUE"
+                  $MissingLicenseFlag = $True
+                }
+              if ($o365msoluserSKU -notcontains $lic3Faculty)
+                {
+                  Write-Host "lic3 NOT present, flip flag to TRUE"
+                  $MissingLicenseFlag = $True
+                }
+
+              # checking $missinglicenseflag value
+              if ($MissingLicenseFlag -eq $True)
+                {
+                  Write-Host "Flag is TRUE, re-adding cloud licenses."
+                  $logfile.writeline((get-date).tostring() + "  Some Licenses missing, setting location and assigning licenses. " + $o365userUPN)
+                  # remove license script block
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -RemoveLicenses $o365msoluserSKU
+                  Write-Host "License removal completed."
+                  # re-add licenses
+                  Write-Host "Adding Licenses."
+                  Set-MsolUser -UserPrincipalName $o365userUPN -UsageLocation US
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic1Faculty -LicenseOptions $licenseFacultyPrimary
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic2Faculty -LicenseOptions $licenseFacultySecondary
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic3Faculty
+                }
+              if ($MissingLicenseFlag -eq $False)
+                {
+                  Write-Host "Flag is FALSE, cloud licenses are present."
+                  $logfile.writeline((get-date).tostring() + " Licenses found " + $o365userUPN)
+                }
+            }
+          else
+            {
+                $logfile.writeline((get-date).tostring() + "  Licenses not found, setting location and assigning license. " + $o365userUPN);
+                #remove license script block
+                Set-MsolUserLicense -UserPrincipalName $o365userUPN -RemoveLicenses $o365msoluserSKU
+                Write-Host "License removal completed."
+                #re-add licenses
+                Write-Host "Adding Licenses."
+                Set-MsolUser -UserPrincipalName $o365userUPN -UsageLocation US
+                Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic1Faculty -LicenseOptions $licenseFacultyPrimary
+                Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic2Faculty -LicenseOptions $licenseFacultySecondary
+                Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic3Faculty
+            }
+        }
+    
+      if ($usergroups -contains "o365.EarlyBirds")
+        {
+          $logfile.writeline((get-date).tostring() + "  found o365.EarlyBirds in " + $accountName)
+
+          if ($o365msoluserSKU)
+            {
+              if ($o365msoluserSKU -notcontains $lic1Early)
+                {
+                  Write-Host "lic1 NOT present, flip flag to TRUE"
+                  $MissingLicenseFlag = $True
+                }
+              if ($o365msoluserSKU -notcontains $lic2Early)
+                {
+                  Write-Host "lic2 NOT present, flip flag to TRUE"
+                  $MissingLicenseFlag = $True
+                }
+              if ($o365msoluserSKU -notcontains $lic3Early)
+                {
+                  Write-Host "lic3 NOT present, flip flag to TRUE"
+                  $MissingLicenseFlag = $True
+                }
+
+              # checking $missinglicenseflag value
+              if ($MissingLicenseFlag -eq $True)
+                {
+                  Write-Host "Flag is TRUE, re-adding cloud licenses."
+                  $logfile.writeline((get-date).tostring() + "  Some Licenses missing, setting location and assigning licenses. " + $o365userUPN)
+                  # remove license script block
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -RemoveLicenses $o365msoluserSKU
+                  Write-Host "License removal completed."
+                  # re-add licenses
+                  Write-Host "Adding Licenses."
+                  Set-MsolUser -UserPrincipalName $o365userUPN -UsageLocation US
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic1Early -LicenseOptions $licenseEarlyPrimary
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic2Early -LicenseOptions $licenseEarlySecondary
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic3Early
+                }
+              if ($MissingLicenseFlag -eq $False)
+                {
+                  Write-Host "Flag is FALSE, cloud licenses are present."
+                  $logfile.writeline((get-date).tostring() + " Licenses found " + $o365userUPN)
+                }
+            }
+          else
+            {
+              $logfile.writeline((get-date).tostring() + "  Licenses not found, setting location and assigning licenses. " + $o365userUPN)
+              # remove license script block
+              Set-MsolUserLicense -UserPrincipalName $o365userUPN -RemoveLicenses $o365msoluserSKU
+              Write-Host "License removal completed."
+              # re-add licenses
+              Write-Host "Adding Licenses."
+              Set-MsolUser -UserPrincipalName $o365userUPN -UsageLocation US
+              Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic1Early -LicenseOptions $licenseEarlyPrimary
+              Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic2Early -LicenseOptions $licenseEarlySecondary
+              Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic3Early
+            }
+        }
+
+      if ($usergroups -contains "o365.Students")
+        {
+          $logfile.writeline((get-date).tostring() + "  found o365.Students in " + $accountName)
+
+          if ($o365msoluserSKU)
+            {
+              if ($o365msoluserSKU -notcontains $lic1Student)
+                {
+                  Write-Host "lic1 NOT present, flip flag to TRUE"
+                  $MissingLicenseFlag = $True
+                }
+              if ($o365msoluserSKU -notcontains $lic2Student)
+                {
+                  Write-Host "lic2 NOT present, flip flag to TRUE"
+                  $MissingLicenseFlag = $True
+                }
+              if ($o365msoluserSKU -notcontains $lic3Student)
+                {
+                  Write-Host "lic3 NOT present, flip flag to TRUE"
+                  $MissingLicenseFlag = $True
+                }
+
+              # checking $missinglicenseflag value
+              if ($MissingLicenseFlag -eq $True)
+                {
+                  Write-Host "Flag is TRUE, re-adding cloud licenses."
+                  $logfile.writeline((get-date).tostring() + "  Some Licenses missing, setting location and assigning licenses. " + $o365userUPN)
+                  # remove license script block
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -RemoveLicenses $o365msoluserSKU
+                  Write-Host "License removal completed."
+                  # re-add licenses
+                  Write-Host "Adding Licenses."
+                  Set-MsolUser -UserPrincipalName $o365userUPN -UsageLocation US
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic1Student -LicenseOptions $licenseStudentPrimary
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic2Student -LicenseOptions $licenseStudentSecondary
+                  Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic3Student
+                }
+              if ($MissingLicenseFlag -eq $False)
+                {
+                  Write-Host "Flag is FALSE, cloud licenses are present."
+                  $logfile.writeline((get-date).tostring() + " Licenses found " + $o365userUPN)
+                }
+            }
+          else
+            {
+              $logfile.writeline((get-date).tostring() + "  Licenses not found, setting location and assigning licenses. " + $o365userUPN)
+              # remove license script block
+              Set-MsolUserLicense -UserPrincipalName $o365userUPN -RemoveLicenses $o365msoluserSKU
+              Write-Host "License removal completed."
+              # re-add licenses
+              Write-Host "Adding Licenses."
+              Set-MsolUser -UserPrincipalName $o365userUPN -UsageLocation US
+              Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic1Student -LicenseOptions $licenseStudentPrimary
+              Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic2Student -LicenseOptions $licenseStudentSecondary
+              Set-MsolUserLicense -UserPrincipalName $o365userUPN -AddLicenses $lic3Student
+            }
+        }
+
+
+    }
+
+  } Else {
+    Write-Host "No user found."
+  }
+
+}
+
+$logfile.writeline((get-date).tostring() + "  End of Cloud Reconcile script.");
+
+
+$logfile.writeline((get-date).tostring() + "  Execution complete.");
+$logfile.close(); 
+
+</pre>
+
+
+	</body>
+</html>
